@@ -34,3 +34,16 @@ tests/_support/_generated
 
 #vagrant folder
 /.vagrant
+
+#config
+/config/db.php
+/config/db.php.save
+
+#runtime
+/runtime
+
+#vscode
+.vscode/
+
+#upload
+/upload/
