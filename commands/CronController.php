@@ -11,6 +11,8 @@ namespace app\commands;
 use yii\console\Controller;
 use yii\console\ExitCode;
 
+use app\services\DescriptionServise;
+
 /**
  * This command echoes the first argument that you have entered.
  *
@@ -26,9 +28,12 @@ class CronController extends Controller
    * @param string $message the message to be echoed.
    * @return int Exit code
    */
-  public function actionIndex($message = 'hello world')
+  public function actionIndex()
   {
-    echo $message . "\n";
+    // echo $message . "\n";
+
+    $descriptionServise = new DescriptionServise;
+    $descriptionServise->getDescription();
 
     return ExitCode::OK;
   }
