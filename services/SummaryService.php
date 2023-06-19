@@ -91,20 +91,28 @@ class SummaryService
     }
   }
 
-  // Создает новую запись;
-  public function createItem(ItemForm $itemFormModel) // НАЧАТЬ ОТСЮДА!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // Получает текущую дату и время;
+  public static function getCurrentDate(): string
   {
-    $account = $this->accessCheck();
+    $expression = new Expression('NOW()');
+    $now = (new \yii\db\Query)->select($expression)->scalar();
+    return $now;
+  }
 
+  // Создает новую запись;
+  public function createItem(ItemForm $itemFormModel)
+  {
+
+    $account = $this->accessCheck(); // Перед созданием записи в системе, проверяю есть ли у пользователя необходимые данные для доступа к Y.Storage/ChatGPT;
     if (!$account) {
       return;
     }
 
+    $newItem = new Summary;
+
     $itemsCount = Summary::find()
       ->where(['created_user' => Yii::$app->user->identity->id])
       ->count();
-
-    $newItem = new Summary;
 
     $newItem->number = $itemsCount + 1;
     $newItem->title = $itemFormModel->title;
@@ -112,10 +120,12 @@ class SummaryService
     $newItem->created_at = $this->getCurrentDate();
     $newItem->updated_at = $this->getCurrentDate();
 
+    // Если был загружен аудио-файл;
     if ($itemFormModel->file) {
       $fileName = substr(md5(microtime() . rand(0, 9999)), 0, 8) . '.' . $itemFormModel->file->extension;
       $uploadPath = './upload' . '/' . $fileName;
       $itemFormModel->file->saveAs($uploadPath);
+
       $newItem->file = $this->uploadYandexStorage($uploadPath, $fileName, $account);
       $newItem->decode_id = $this->decodeAudio($newItem->file, $itemFormModel->file->extension, $account);
       $newItem->summary_status = 1; // Конвертация речи в текст;
@@ -130,22 +140,26 @@ class SummaryService
       } catch (\Throwable $e) {
         $transaction->rollBack();
       }
-    } else {
-      $newItem->summary_status = 2; // Получение краткого описания;
-      $transaction = Yii::$app->db->beginTransaction();
+    }
+    // Если загружено подробное описание; 
+    else {
+      $newItem->summary_status = 2;
+
+      $transaction1 = Yii::$app->db->beginTransaction();
       try {
         $newItem->save();
-        $transaction->commit();
+        $transaction1->commit();
       } catch (\Exception $e) {
-        $transaction->rollBack();
+        $transaction1->rollBack();
         throw $e;
       } catch (\Throwable $e) {
-        $transaction->rollBack();
+        $transaction1->rollBack();
       }
 
       $newDetail = new Detail;
       $newDetail->detail_text = $itemFormModel->detail;
       $newDetail->summary_id = $newItem->id;
+
       $transaction2 = Yii::$app->db->beginTransaction();
       try {
         $newDetail->save();
@@ -155,19 +169,6 @@ class SummaryService
         throw $e;
       } catch (\Throwable $e) {
         $transaction2->rollBack();
-      }
-
-      $transaction = Yii::$app->db->beginTransaction();
-      try {
-        $newItem->save();
-        $newDetail->save();
-
-        $transaction->commit();
-      } catch (\Exception $e) {
-        $transaction->rollBack();
-        throw $e;
-      } catch (\Throwable $e) {
-        $transaction->rollBack();
       }
     }
   }

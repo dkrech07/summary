@@ -28,52 +28,11 @@ class SummaryService
 {
 
 
-  // Получает текущую дату и время;
-  public static function getCurrentDate(): string
-  {
-    $expression = new Expression('NOW()');
-    $now = (new \yii\db\Query)->select($expression)->scalar();
-    return $now;
-  }
 
 
 
 
-  // Получает краткое описание от Chat GPT;
-  public function getSummary($data, $account)
-  {
-    $open_ai_key = $account->openai_api_key; //getenv('OPENAI_API_KEY');
-    $open_ai = new OpenAi($open_ai_key);
 
-    $chat = $open_ai->chat([
-      'model' => $account->openai_chat_model, //'gpt-3.5-turbo',
-      'messages' => [
-        [
-          "role" => "user",
-          "content" => $account->openai_request . ': ' . $data,
-        ],
-      ],
-      // 'temperature' => 1.0,
-      // 'max_tokens' => 4000,
-      // 'frequency_penalty' => 0,
-      // 'presence_penalty' => 0,
-    ]);
-
-    $d = json_decode($chat);
-
-    // print($data);
-    // print('<br>');
-    // print('<br>');
-    // print('<br>');
-    // print_r($d->choices[0]->message->content);
-    // exit;
-
-    if (isset($d->choices[0]->message->content)) {
-      return $d->choices[0]->message->content;
-    } else {
-      return false; //'упс...ошибка...'
-    }
-  }
 
   // public function getDescription()
   // {
@@ -390,5 +349,89 @@ class SummaryService
   //     }
   //     // $this->refresh();
   //   }
+  // }
+
+
+
+
+  // Создает новую запись;
+  // public function createItem(ItemForm $itemFormModel) // НАЧАТЬ ОТСЮДА!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // {
+    // $account = $this->accessCheck();
+
+    // if (!$account) {
+    //   return;
+    // }
+
+    // $itemsCount = Summary::find()
+    //   ->where(['created_user' => Yii::$app->user->identity->id])
+    //   ->count();
+
+    // $newItem = new Summary;
+
+    // $newItem->number = $itemsCount + 1;
+    // $newItem->title = $itemFormModel->title;
+    // $newItem->created_user = Yii::$app->user->identity->id;
+    // $newItem->created_at = $this->getCurrentDate();
+    // $newItem->updated_at = $this->getCurrentDate();
+
+    if ($itemFormModel->file) {
+      $fileName = substr(md5(microtime() . rand(0, 9999)), 0, 8) . '.' . $itemFormModel->file->extension;
+      $uploadPath = './upload' . '/' . $fileName;
+      $itemFormModel->file->saveAs($uploadPath);
+      $newItem->file = $this->uploadYandexStorage($uploadPath, $fileName, $account);
+      $newItem->decode_id = $this->decodeAudio($newItem->file, $itemFormModel->file->extension, $account);
+      $newItem->summary_status = 1; // Конвертация речи в текст;
+
+      $transaction = Yii::$app->db->beginTransaction();
+      try {
+        $newItem->save();
+        $transaction->commit();
+      } catch (\Exception $e) {
+        $transaction->rollBack();
+        throw $e;
+      } catch (\Throwable $e) {
+        $transaction->rollBack();
+      }
+    } else {
+      $newItem->summary_status = 2; // Получение краткого описания;
+      $transaction = Yii::$app->db->beginTransaction();
+      try {
+        $newItem->save();
+        $transaction->commit();
+      } catch (\Exception $e) {
+        $transaction->rollBack();
+        throw $e;
+      } catch (\Throwable $e) {
+        $transaction->rollBack();
+      }
+
+      $newDetail = new Detail;
+      $newDetail->detail_text = $itemFormModel->detail;
+      $newDetail->summary_id = $newItem->id;
+      $transaction2 = Yii::$app->db->beginTransaction();
+      try {
+        $newDetail->save();
+        $transaction2->commit();
+      } catch (\Exception $e) {
+        $transaction2->rollBack();
+        throw $e;
+      } catch (\Throwable $e) {
+        $transaction2->rollBack();
+      }
+
+      $transaction = Yii::$app->db->beginTransaction();
+      try {
+        $newItem->save();
+        $newDetail->save();
+
+        $transaction->commit();
+      } catch (\Exception $e) {
+        $transaction->rollBack();
+        throw $e;
+      } catch (\Throwable $e) {
+        $transaction->rollBack();
+      }
+    }
   // }
 }

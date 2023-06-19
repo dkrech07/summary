@@ -21,6 +21,8 @@ use Yii;
  * @property User $createdUser
  * @property Detail[] $details
  * @property Status $summaryStatus
+ * @property Account $summaryStatus
+
  */
 class Summary extends \yii\db\ActiveRecord
 {
@@ -95,5 +97,15 @@ class Summary extends \yii\db\ActiveRecord
     public function getSummaryStatus()
     {
         return $this->hasOne(Status::class, ['id' => 'summary_status']);
+    }
+
+    /**
+     * Gets query for [[Account]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getAccount()
+    {
+        return $this->hasOne(Account::class, ['user_id' => 'created_user']);
     }
 }

@@ -54,10 +54,10 @@ class DescriptionServise
       ->all();
 
     // Загружено подробное описание / Аудио преобразовано в подробное описание;
-    $descriptionList = Summary::find()
-      ->joinWith('details')
-      ->where(['created_user' => Yii::$app->user->identity->id, 'summary_status' => 2])
-      ->all();
+    // $descriptionList = Summary::find()
+    //   ->joinWith('details')
+    //   ->where(['created_user' => Yii::$app->user->identity->id, 'summary_status' => 2])
+    //   ->all();
 
     // Подготовлено краткое описание;
     // $summaryList = Summary::find()
