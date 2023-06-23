@@ -70,27 +70,22 @@ class DescriptionServise
 
     if ($descriptionList) {
       foreach ($descriptionList as $item) {
-        $descriptionText = $this->getSummary($item); // $item->details[0]->detail_text, $account
 
-        print_r($descriptionText);
-        // // print_r($item->details[0]->detail_text);
-        // // exit;
+        if ($item->details[0]->detail_text) {
+          $item->summary = $this->getSummary($item);
+          $item->summary_status = 3;
 
-        // if ($item->details[0]->detail_text) {
-        //   $item->summary = $summaryService->getSummary($descriptionText, $account);
-        //   $item->summary_status = 3;
-
-        //   $transaction = Yii::$app->db->beginTransaction();
-        //   try {
-        //     $item->save();
-        //     $transaction->commit();
-        //   } catch (\Exception $e) {
-        //     $transaction->rollBack();
-        //     throw $e;
-        //   } catch (\Throwable $e) {
-        //     $transaction->rollBack();
-        //   }
-        // }
+          $transaction = Yii::$app->db->beginTransaction();
+          try {
+            $item->save();
+            $transaction->commit();
+          } catch (\Exception $e) {
+            $transaction->rollBack();
+            throw $e;
+          } catch (\Throwable $e) {
+            $transaction->rollBack();
+          }
+        }
       }
       // $this->refresh();
     }
